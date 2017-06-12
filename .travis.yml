@@ -7,7 +7,7 @@ cache: pip
 install:
 - pip install -e .[test]
 script:
-- py.test --cov=dataloader
+- py.test --cov=aiodataloader
 after_success:
 - coveralls
 matrix:
@@ -19,4 +19,4 @@ matrix:
   - python: '3.5'
     script: |
       pip install mypy
-      mypy dataloader.py  --check-untyped-defs  --ignore-missing-imports
+      mypy aiodataloader.py  --check-untyped-defs  --ignore-missing-imports
