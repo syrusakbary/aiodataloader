@@ -1,12 +1,26 @@
+import os
 import sys
 from setuptools import setup, find_packages
 
-version = __import__('aiodataloader').__version__
 
+def get_version(filename):
+    import os
+    import re
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(here, filename)) as f:
+        version_file = f.read()
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
+                              version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
+
+
+version = get_version('aiodataloader.py')
 
 tests_require = [
-    'pytest>=2.7.3', 'pytest-cov', 'coveralls',
-    'mock', 'pytest-asyncio'
+    'pytest>=2.7.3', 'pytest-cov', 'coveralls', 'mock', 'pytest-asyncio'
 ]
 
 setup(
@@ -29,7 +43,7 @@ setup(
         'License :: OSI Approved :: MIT License',
     ],
     keywords='concurrent future deferred aiodataloader',
-    packages=find_packages(exclude=['tests']),
+    py_modules=['aiodataloader'],
     extras_require={
         'test': tests_require,
     },
