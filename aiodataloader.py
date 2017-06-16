@@ -156,7 +156,7 @@ class DataLoader(object):
 
 def enqueue_post_future_job(loop, loader):
     async def dispatch():
-        return await dispatch_queue(loader)
+        dispatch_queue(loader)
     loop.call_soon(ensure_future, dispatch())
 
 
