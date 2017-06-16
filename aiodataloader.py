@@ -165,7 +165,7 @@ def get_chunks(iterable_obj, chunk_size=1):
     return (iterable_obj[i:i + chunk_size] for i in range(0, len(iterable_obj), chunk_size))
 
 
-async def dispatch_queue(loader):
+def dispatch_queue(loader):
     '''
     Given the current state of a Loader instance, perform a batch load
     from its current queue.
@@ -181,12 +181,12 @@ async def dispatch_queue(loader):
     if max_batch_size and max_batch_size < len(queue):
         chunks = get_chunks(queue, max_batch_size)
         for chunk in chunks:
-            await dispatch_queue_batch(
+            ensure_future(dispatch_queue_batch(
                 loader,
                 chunk
-            )
+            ))
     else:
-        await dispatch_queue_batch(loader, queue)
+        ensure_future(dispatch_queue_batch(loader, queue))
 
 
 async def dispatch_queue_batch(loader, queue):
