@@ -17,12 +17,12 @@ class DataLoader(object):
     cache = True
 
     def __init__(self, batch_load_fn=None, batch=None, max_batch_size=None, cache=None, get_cache_key=None, cache_map=None, loop=None):
-        
+
         self.loop = loop or get_event_loop()
 
         if batch_load_fn is not None:
             self.batch_load_fn = batch_load_fn
-        
+
         assert iscoroutinefunction(self.batch_load_fn), "batch_load_fn must be coroutine. Received: {}".format(self.batch_load_fn)
 
         if not callable(self.batch_load_fn):
@@ -43,12 +43,12 @@ class DataLoader(object):
         if get_cache_key is not None:
             self.get_cache_key = get_cache_key
 
-        self._cache = cache_map or {}
+        self._cache = cache_map if cache_map is not None else {}
         self._queue = []  # type: List[Loader]
 
     def get_cache_key(self, key):  # type: ignore
         return key
-    
+
     def load(self, key=None):
         '''
         Loads a key, returning a `Future` for the value represented by that key.
@@ -207,7 +207,7 @@ async def dispatch_queue_batch(loader, queue):
                 'not return a Coroutine: {}.'
             ).format(batch_future))
         )
-    
+
     try:
         values = await batch_future
         if not isinstance(values, Iterable):
@@ -216,7 +216,7 @@ async def dispatch_queue_batch(loader, queue):
                 'Iterable<key> and returns Future<Iterable<value>>, but the function did '
                 'not return a Future of a Iterable: {}.'
             ).format(values))
-        
+
         values = list(values)
         if len(values) != len(keys):
             raise TypeError((
