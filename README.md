@@ -74,9 +74,8 @@ user2 = await user2_future
 user1_invitedby = user_loader.load(user1.invited_by_id)
 user2_invitedby = user_loader.load(user2.invited_by_id)
 
-
-print "User 1 was invited by", await user1_invitedby
-print "User 2 was invited by", await user2_invitedby
+print("User 1 was invited by", await user1_invitedby)
+print("User 2 was invited by", await user2_invitedby)
 ```
 
 A naive application may have issued four round-trips to a backend for the
