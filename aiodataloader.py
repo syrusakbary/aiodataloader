@@ -2,7 +2,7 @@ from asyncio import gather, ensure_future, get_event_loop, iscoroutine, iscorout
 from collections import namedtuple
 from collections.abc import Iterable
 
-from typing import List, Optional
+from typing import List, Optional  # noqa
 
 
 __version__ = "0.1.2"
@@ -12,9 +12,9 @@ Loader = namedtuple("Loader", "key,future")
 
 class DataLoader:
 
-    batch = True
-    max_batch_size: Optional[int] = None
-    cache = True
+    batch = True  # type: bool
+    max_batch_size = None  # type: Optional[int]
+    cache = True  # type: bool
 
     def __init__(
         self,
@@ -57,7 +57,7 @@ class DataLoader:
             self.get_cache_key = get_cache_key
 
         self._cache = cache_map if cache_map is not None else {}
-        self._queue: List[Loader] = []
+        self._queue = []  # type: List[Loader]
 
     def get_cache_key(self, key):  # type: ignore
         return key
