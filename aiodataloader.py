@@ -55,7 +55,7 @@ class DataLoader(object):
         '''
         if key is None:
             raise TypeError((
-                'The loader.load() function must be called with a value,' +
+                'The loader.load() function must be called with a value, '
                 'but got: {}.'
             ).format(key))
 
@@ -108,7 +108,7 @@ class DataLoader(object):
         '''
         if not isinstance(keys, Iterable):
             raise TypeError((
-                'The loader.load_many() function must be called with Iterable<key> ' +
+                'The loader.load_many() function must be called with Iterable<key> '
                 'but got: {}.'
             ).format(keys))
 
