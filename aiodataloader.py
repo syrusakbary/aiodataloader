@@ -1,5 +1,5 @@
 from asyncio import gather, ensure_future, get_event_loop, iscoroutine, iscoroutinefunction
-from collections import Iterable, Sized, namedtuple
+from collections import Iterable, namedtuple
 from functools import partial
 
 from typing import List  # flake8: noqa
@@ -10,20 +10,26 @@ __version__ = '0.1.2'
 Loader = namedtuple('Loader', 'key,future')
 
 
+def iscoroutinefunctionorpartial(fn):
+    return iscoroutinefunction(fn.func if isinstance(fn, partial) else fn)
+
+
 class DataLoader(object):
 
     batch = True
     max_batch_size = None  # type: int
     cache = True
 
-    def __init__(self, batch_load_fn=None, batch=None, max_batch_size=None, cache=None, get_cache_key=None, cache_map=None, loop=None):
+    def __init__(self, batch_load_fn=None, batch=None, max_batch_size=None,
+                 cache=None, get_cache_key=None, cache_map=None, loop=None):
 
         self.loop = loop or get_event_loop()
 
         if batch_load_fn is not None:
             self.batch_load_fn = batch_load_fn
 
-        assert iscoroutinefunction(self.batch_load_fn), "batch_load_fn must be coroutine. Received: {}".format(self.batch_load_fn)
+        assert iscoroutinefunctionorpartial(self.batch_load_fn), "batch_load_fn must be coroutine. Received: {}".format(
+            self.batch_load_fn)
 
         if not callable(self.batch_load_fn):
             raise TypeError((

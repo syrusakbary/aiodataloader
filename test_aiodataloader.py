@@ -1,5 +1,6 @@
 import pytest
 from asyncio import gather
+from functools import partial
 from pytest import raises
 
 from aiodataloader import DataLoader
@@ -22,7 +23,7 @@ def id_loader(**options):
         load_calls.append(keys)
         return await resolve(keys)
         # return keys
-    
+
     identity_loader = DataLoader(fn, **options)
     return identity_loader, load_calls
 
@@ -36,6 +37,19 @@ async def test_build_a_simple_data_loader():
 
     value1 = await promise1
     assert value1 == 1
+
+
+async def test_can_build_a_data_loader_from_a_partial():
+    value_map = {1: 'one'}
+    async def call_fn(context, keys):
+        return [context.get(key) for key in keys]
+    partial_fn = partial(call_fn, value_map)
+    identity_loader = DataLoader(partial_fn)
+
+    promise1 = identity_loader.load(1)
+
+    value1 = await promise1
+    assert value1 == 'one'
 
 
 async def test_supports_loading_multiple_keys_in_one_call():
@@ -306,7 +320,7 @@ async def test_caches_failed_fetches_2():
     with raises(Exception) as exc_info:
         await identity_loader.load(1)
 
-    assert load_calls == [] 
+    assert load_calls == []
 
 # It is resilient to job queue ordering
 
@@ -314,10 +328,10 @@ async def test_batches_loads_occuring_within_promises():
     identity_loader, load_calls = id_loader()
     async def load_b_1():
         return await load_b_2()
-    
+
     async def load_b_2():
         return await identity_loader.load('B')
-    
+
     values = await gather(
         identity_loader.load('A'),
         load_b_1()
