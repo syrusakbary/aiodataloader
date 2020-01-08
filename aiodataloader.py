@@ -46,19 +46,15 @@ class DataLoader(object):
         if cache is not None:
             self.cache = cache
 
-        if get_cache_key is not None:
-            self.get_cache_key = get_cache_key
+        self.get_cache_key = get_cache_key or (lambda x: x)
 
         self._cache = cache_map if cache_map is not None else {}
         self._queue = []  # type: List[Loader]
 
-    def get_cache_key(self, key):  # type: ignore
-        return key
-
     def load(self, key=None):
-        '''
+        """
         Loads a key, returning a `Future` for the value represented by that key.
-        '''
+        """
         if key is None:
             raise TypeError((
                 'The loader.load() function must be called with a value, '
@@ -100,7 +96,7 @@ class DataLoader(object):
                 dispatch_queue(self)
 
     def load_many(self, keys):
-        '''
+        """
         Loads multiple keys, returning a list of values
 
         >>> a, b = await my_loader.load_many([ 'a', 'b' ])
@@ -111,7 +107,7 @@ class DataLoader(object):
         >>>    my_loader.load('a'),
         >>>    my_loader.load('b')
         >>> )
-        '''
+        """
         if not isinstance(keys, Iterable):
             raise TypeError((
                 'The loader.load_many() function must be called with Iterable<key> '
@@ -121,28 +117,28 @@ class DataLoader(object):
         return gather(*[self.load(key) for key in keys])
 
     def clear(self, key):
-        '''
+        """
         Clears the value at `key` from the cache, if it exists. Returns itself for
         method chaining.
-        '''
+        """
         cache_key = self.get_cache_key(key)
         self._cache.pop(cache_key, None)
         return self
 
     def clear_all(self):
-        '''
+        """
         Clears the entire cache. To be used when some event results in unknown
         invalidations across this particular `DataLoader`. Returns itself for
         method chaining.
-        '''
+        """
         self._cache.clear()
         return self
 
     def prime(self, key, value):
-        '''
+        """
         Adds the provied key and value to the cache. If the key already exists, no
         change is made. Returns itself for method chaining.
-        '''
+        """
         cache_key = self.get_cache_key(key)
 
         # Only add the key if it does not already exist.
@@ -172,10 +168,10 @@ def get_chunks(iterable_obj, chunk_size=1):
 
 
 def dispatch_queue(loader):
-    '''
+    """
     Given the current state of a Loader instance, perform a batch load
     from its current queue.
-    '''
+    """
     # Take the current loader queue, replacing it with an empty queue.
     queue = loader._queue
     loader._queue = []
@@ -247,10 +243,10 @@ async def dispatch_queue_batch(loader, queue):
 
 
 def failed_dispatch(loader, queue, error):
-    '''
+    """
     Do not cache individual loads if the entire batch dispatch fails,
     but still reject each request so they do not hang.
-    '''
+    """
     for l in queue:
         loader.clear(l.key)
         l.future.set_exception(error)
