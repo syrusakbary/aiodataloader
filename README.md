@@ -165,7 +165,7 @@ def create_loaders(auth_token) {
 
 app = Sanic(__name__)
 
-@app.route("/")
+@app.route('/')
 async def test(request):
     auth_token = authenticate_user(request)
     loaders = create_loaders(auth_token)
