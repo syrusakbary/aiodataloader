@@ -80,8 +80,8 @@ all requested keys.
     user1_invitedby = user_loader.load(user1.invited_by_id)
     user2_invitedby = user_loader.load(user2.invited_by_id)
 
-    print("User 1 was invited by", await user1_invitedby)
-    print("User 2 was invited by", await user2_invitedby)
+    print('User 1 was invited by', await user1_invitedby)
+    print('User 2 was invited by', await user2_invitedby)
 
 A naive application may have issued four round-trips to a backend for
 the required information, but with DataLoader this application will make
@@ -232,7 +232,7 @@ individual Errors:
 .. code:: python
 
     try:
-        user_loader.load(1)
+        await user_loader.load(1)
     except Exception as e:
         user_loader.clear(1)
         raise
@@ -262,9 +262,9 @@ For example:
 
     my_loader = MyLoader()
 
-    my_loader.load('A')
-    my_loader.load('B')
-    my_loader.load('A')
+    await my_loader.load('A')
+    await my_loader.load('B')
+    await my_loader.load('A')
 
     # > [ 'A', 'B', 'A' ]
 
@@ -424,11 +424,11 @@ database requests, and possibly fewer if there are cache hits.
         best_friend = graphene.Field(lambda: User)
         friends = graphene.List(lambda: User)
 
-        def resolve_best_friend(self, args, context, info):
-            return user_loader.load(self.best_friend_id)
+        async def resolve_best_friend(self, args, context, info):
+            return await user_loader.load(self.best_friend_id)
 
-        def resolve_friends(self, args, context, info):
-            return user_loader.load_many(self.friend_ids)
+        async def resolve_friends(self, args, context, info):
+            return await user_loader.load_many(self.friend_ids)
 
 Common Patterns
 ---------------
