@@ -6,7 +6,7 @@ from functools import partial
 from typing import List  # flake8: noqa
 
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 Loader = namedtuple('Loader', 'key,future')
 
