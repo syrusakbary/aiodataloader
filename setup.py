@@ -52,4 +52,5 @@ setup(
         'lint': ['flake8', 'mypy'],
         'test': tests_require,
     },
+    install_requires=["typing_extensions>=4.3.0"],
     tests_require=tests_require, )

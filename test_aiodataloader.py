@@ -1,36 +1,45 @@
+from collections.abc import Callable, Coroutine
 import pytest
 from asyncio import gather
 from functools import partial
 from pytest import raises
-
+from typing import Dict, List, Optional, Tuple, TypeVar
 from aiodataloader import DataLoader
 
 pytestmark = pytest.mark.asyncio
+
+
+T1 = TypeVar("T1")
+T2 = TypeVar("T2")
+
 
 async def do_test():
     return True
 
 
-def id_loader(**options):
+def id_loader(
+    *, resolve: Optional[Callable[..., Coroutine]] = None, **dl_kwargs
+) -> Tuple[DataLoader, List]:
     load_calls = []
 
-    async def default_resolve(x):
+    async def default_resolve(x: T1) -> T1:
         return x
 
-    resolve = options.pop('resolve', default_resolve)
+    if resolve is None:
+        resolve = default_resolve
 
-    async def fn(keys):
+    async def fn(keys: List) -> List:
         load_calls.append(keys)
         return await resolve(keys)
-        # return keys
 
-    identity_loader = DataLoader(fn, **options)
+    identity_loader: DataLoader = DataLoader(fn, **dl_kwargs)
     return identity_loader, load_calls
 
 
 async def test_build_a_simple_data_loader():
-    async def call_fn(keys):
+    async def call_fn(keys: List[int]) -> List[int]:
         return keys
+
     identity_loader = DataLoader(call_fn)
 
     promise1 = identity_loader.load(1)
@@ -40,9 +49,11 @@ async def test_build_a_simple_data_loader():
 
 
 async def test_can_build_a_data_loader_from_a_partial():
-    value_map = {1: 'one'}
-    async def call_fn(context, keys):
+    value_map = {1: "one"}
+
+    async def call_fn(context: Dict, keys: List[int]):
         return [context.get(key) for key in keys]
+
     partial_fn = partial(call_fn, value_map)
     identity_loader = DataLoader(partial_fn)
 
@@ -53,7 +64,7 @@ async def test_can_build_a_data_loader_from_a_partial():
 
 
 async def test_supports_loading_multiple_keys_in_one_call():
-    async def call_fn(keys):
+    async def call_fn(keys: List[int]):
         return keys
 
     identity_loader = DataLoader(call_fn)
@@ -357,8 +368,12 @@ async def test_catches_error_if_loader_resolver_fails():
 
 async def test_can_call_a_loader_from_a_loader():
     deep_loader, deep_load_calls = id_loader()
-    a_loader, a_load_calls = id_loader(resolve=lambda keys:deep_loader.load(tuple(keys)))
-    b_loader, b_load_calls = id_loader(resolve=lambda keys:deep_loader.load(tuple(keys)))
+
+    async def do_resolve(keys):
+        return await deep_loader.load(tuple(keys))
+
+    a_loader, a_load_calls = id_loader(resolve=do_resolve)
+    b_loader, b_load_calls = id_loader(resolve=do_resolve)
 
     a1, b1, a2, b2 = await gather(
         a_loader.load('A1'),
