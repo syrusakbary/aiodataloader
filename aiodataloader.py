@@ -1,12 +1,6 @@
-from asyncio import (
-    AbstractEventLoop,
-    Future,
-    gather,
-    ensure_future,
-    get_event_loop,
-    iscoroutine,
-    iscoroutinefunction,
-)
+from asyncio import AbstractEventLoop, Future
+from asyncio import gather, ensure_future, get_event_loop, iscoroutine, iscoroutinefunction
+from collections import namedtuple
 from functools import partial
 
 from typing import (
@@ -24,7 +18,7 @@ from typing import (
 )
 from typing_extensions import Protocol, TypeGuard
 
-__version__ = "0.2.1"
+__version__ = '0.2.1'
 
 
 def iscoroutinefunctionorpartial(fn: Callable) -> TypeGuard[Callable[..., Coroutine]]:
@@ -34,6 +28,7 @@ def iscoroutinefunctionorpartial(fn: Callable) -> TypeGuard[Callable[..., Corout
 KeyT = TypeVar("KeyT")
 ReturnT = TypeVar("ReturnT")
 CacheKeyT = TypeVar("CacheKeyT")
+DataLoaderT = TypeVar("DataLoaderT", bound="DataLoader")
 T = TypeVar("T")
 
 
@@ -41,23 +36,7 @@ class BatchLoadFnProto(Protocol[KeyT, ReturnT]):
     async def __call__(self, keys: List[KeyT]) -> List[ReturnT]:
         ...
 
-
-class Loader(tuple, Generic[KeyT, ReturnT]):
-    # NamedTuple has a metaclass conflict with Generic that prevents
-    # it from being used generically, and dataclasses aren't supported until
-    # Python 3.7
-
-    key: KeyT
-    future: "Future[ReturnT]"
-
-    def __new__(cls, key: KeyT, future: "Future[ReturnT]"):
-        self = tuple.__new__(cls, (key, future))
-        self.key = key
-        self.future = future
-        return self
-
-    def __repr__(self) -> str:
-        return f"Loader(key={self.key}, future={self.future})"
+Loader = namedtuple('Loader', 'key,future')
 
 
 class DataLoader(Generic[KeyT, ReturnT]):
@@ -65,7 +44,6 @@ class DataLoader(Generic[KeyT, ReturnT]):
     batch: bool = True
     max_batch_size: Optional[int] = None
     cache: Optional[bool] = True
-    _queue: List[Loader[KeyT, ReturnT]]
 
     def __init__(
         self,
@@ -73,7 +51,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
         batch: Optional[bool] = None,
         max_batch_size: Optional[int] = None,
         cache: Optional[bool] = None,
-        get_cache_key: Optional[Callable[[KeyT], CacheKeyT]] = None,
+        get_cache_key: Optional[Callable[[KeyT], Union[CacheKeyT, KeyT]]] = None,
         cache_map: Optional[Dict[Union[CacheKeyT, KeyT], Any]] = None,
         loop: Optional[AbstractEventLoop] = None,
     ):
@@ -103,7 +81,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
         self.get_cache_key = get_cache_key or (lambda x: x)
 
         self._cache = cache_map if cache_map is not None else {}
-        self._queue = []
+        self._queue: List[Loader] = []
 
     def load(self, key: Optional[KeyT] = None) -> "Future[ReturnT]":
         """
@@ -170,7 +148,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
 
         return gather(*[self.load(key) for key in keys])
 
-    def clear(self, key: KeyT) -> "DataLoader":
+    def clear(self: DataLoaderT, key: KeyT) -> DataLoaderT:
         """
         Clears the value at `key` from the cache, if it exists. Returns itself for
         method chaining.
@@ -179,7 +157,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
         self._cache.pop(cache_key, None)
         return self
 
-    def clear_all(self) -> "DataLoader":
+    def clear_all(self: DataLoaderT) -> DataLoaderT:
         """
         Clears the entire cache. To be used when some event results in unknown
         invalidations across this particular `DataLoader`. Returns itself for
@@ -188,7 +166,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
         self._cache.clear()
         return self
 
-    def prime(self, key: KeyT, value: ReturnT) -> "DataLoader":
+    def prime(self: DataLoaderT, key: KeyT, value: ReturnT) -> DataLoaderT:
         """
         Adds the provied key and value to the cache. If the key already exists, no
         change is made. Returns itself for method chaining.
@@ -246,9 +224,7 @@ def dispatch_queue(loader: DataLoader) -> None:
         ensure_future(dispatch_queue_batch(loader, queue))
 
 
-async def dispatch_queue_batch(
-    loader: DataLoader[KeyT, ReturnT], queue: List[Loader[KeyT, ReturnT]]
-) -> None:
+async def dispatch_queue_batch(loader: DataLoader, queue: List[Loader]) -> None:
     # Collect all keys to be loaded in this dispatch
     keys = [ql.key for ql in queue]
 
@@ -299,11 +275,7 @@ async def dispatch_queue_batch(
         return failed_dispatch(loader, queue, e)
 
 
-def failed_dispatch(
-    loader: DataLoader[KeyT, ReturnT],
-    queue: List[Loader[KeyT, ReturnT]],
-    error: Exception,
-) -> None:
+def failed_dispatch(loader: DataLoader, queue: List[Loader], error: Exception) -> None:
     """
     Do not cache individual loads if the entire batch dispatch fails,
     but still reject each request so they do not hang.

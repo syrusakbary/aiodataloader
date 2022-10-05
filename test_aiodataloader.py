@@ -25,12 +25,9 @@ def id_loader(
     async def default_resolve(x: T1) -> T1:
         return x
 
-    if resolve is None:
-        resolve = default_resolve
-
     async def fn(keys: List) -> List:
         load_calls.append(keys)
-        return await resolve(keys)
+        return await (resolve or default_resolve)(keys)
 
     identity_loader: DataLoader = DataLoader(fn, **dl_kwargs)
     return identity_loader, load_calls
