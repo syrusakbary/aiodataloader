@@ -42,11 +42,14 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'License :: OSI Approved :: MIT License',
     ],
     keywords='concurrent future deferred aiodataloader',
     py_modules=['aiodataloader'],
     extras_require={
+        'lint': ['flake8', 'mypy'],
         'test': tests_require,
     },
     tests_require=tests_require, )

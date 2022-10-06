@@ -194,7 +194,7 @@ def dispatch_queue(loader):
 
 async def dispatch_queue_batch(loader, queue):
     # Collect all keys to be loaded in this dispatch
-    keys = [l.key for l in queue]
+    keys = [ql.key for ql in queue]
 
     # Call the provided batch_load_fn for this loader with the loader queue's keys.
     batch_future = loader.batch_load_fn(keys)
@@ -233,11 +233,11 @@ async def dispatch_queue_batch(loader, queue):
 
         # Step through the values, resolving or rejecting each Future in the
         # loaded queue.
-        for l, value in zip(queue, values):
+        for ql, value in zip(queue, values):
             if isinstance(value, Exception):
-                l.future.set_exception(value)
+                ql.future.set_exception(value)
             else:
-                l.future.set_result(value)
+                ql.future.set_result(value)
 
     except Exception as e:
         return failed_dispatch(loader, queue, e)
@@ -248,6 +248,6 @@ def failed_dispatch(loader, queue, error):
     Do not cache individual loads if the entire batch dispatch fails,
     but still reject each request so they do not hang.
     """
-    for l in queue:
-        loader.clear(l.key)
-        l.future.set_exception(error)
+    for ql in queue:
+        loader.clear(ql.key)
+        ql.future.set_exception(error)
