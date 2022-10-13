@@ -1,3 +1,5 @@
+import sys
+
 from asyncio import AbstractEventLoop, Future
 from asyncio import gather, ensure_future, get_event_loop, iscoroutine, iscoroutinefunction
 from collections import namedtuple
@@ -16,25 +18,37 @@ from typing import (
     TypeVar,
     Union,
 )
-from typing_extensions import Protocol, TypeGuard
+
+if sys.version_info >= (3, 8):
+    from typing import Protocol
+else:
+    from typing_extensions import Protocol
+
+if sys.version_info >= (3, 10):
+    from typing import TypeGuard
+else:
+    from typing_extensions import TypeGuard
 
 __version__ = '0.2.1'
-
-
-def iscoroutinefunctionorpartial(fn: Callable) -> TypeGuard[Callable[..., Coroutine]]:
-    return iscoroutinefunction(fn.func if isinstance(fn, partial) else fn)
 
 
 KeyT = TypeVar("KeyT")
 ReturnT = TypeVar("ReturnT")
 CacheKeyT = TypeVar("CacheKeyT")
-DataLoaderT = TypeVar("DataLoaderT", bound="DataLoader")
+DataLoaderT = TypeVar("DataLoaderT", bound="DataLoader[Any, Any]")
 T = TypeVar("T")
+
+
+def iscoroutinefunctionorpartial(
+    fn: Union[Callable[..., ReturnT], "partial[ReturnT]"],
+) -> TypeGuard[Callable[..., Coroutine[Any, Any, ReturnT]]]:
+    return iscoroutinefunction(fn.func if isinstance(fn, partial) else fn)
 
 
 class BatchLoadFnProto(Protocol[KeyT, ReturnT]):
     async def __call__(self, keys: List[KeyT]) -> List[ReturnT]:
         ...
+
 
 Loader = namedtuple('Loader', 'key,future')
 
@@ -52,7 +66,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
         max_batch_size: Optional[int] = None,
         cache: Optional[bool] = None,
         get_cache_key: Optional[Callable[[KeyT], Union[CacheKeyT, KeyT]]] = None,
-        cache_map: Optional[Dict[Union[CacheKeyT, KeyT], Any]] = None,
+        cache_map: Optional[Dict[Union[CacheKeyT, KeyT], "Future[ReturnT]"]] = None,
         loop: Optional[AbstractEventLoop] = None,
     ):
         self.loop = loop or get_event_loop()
@@ -188,7 +202,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
         return self
 
 
-def enqueue_post_future_job(loop: AbstractEventLoop, loader: DataLoader) -> None:
+def enqueue_post_future_job(loop: AbstractEventLoop, loader: DataLoader[Any, Any]) -> None:
     async def dispatch() -> None:
         dispatch_queue(loader)
 
@@ -200,7 +214,7 @@ def get_chunks(iterable_obj: List[T], chunk_size: int = 1) -> Iterator[List[T]]:
     return (iterable_obj[i:i + chunk_size] for i in range(0, len(iterable_obj), chunk_size))
 
 
-def dispatch_queue(loader: DataLoader) -> None:
+def dispatch_queue(loader: DataLoader[Any, Any]) -> None:
     """
     Given the current state of a Loader instance, perform a batch load
     from its current queue.
@@ -224,7 +238,7 @@ def dispatch_queue(loader: DataLoader) -> None:
         ensure_future(dispatch_queue_batch(loader, queue))
 
 
-async def dispatch_queue_batch(loader: DataLoader, queue: List[Loader]) -> None:
+async def dispatch_queue_batch(loader: DataLoader[Any, Any], queue: List[Loader]) -> None:
     # Collect all keys to be loaded in this dispatch
     keys = [ql.key for ql in queue]
 
@@ -275,7 +289,7 @@ async def dispatch_queue_batch(loader: DataLoader, queue: List[Loader]) -> None:
         return failed_dispatch(loader, queue, e)
 
 
-def failed_dispatch(loader: DataLoader, queue: List[Loader], error: Exception) -> None:
+def failed_dispatch(loader: DataLoader[Any, Any], queue: List[Loader], error: Exception) -> None:
     """
     Do not cache individual loads if the entire batch dispatch fails,
     but still reject each request so they do not hang.
