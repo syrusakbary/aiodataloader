@@ -38,7 +38,6 @@ setup(
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Libraries',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
@@ -48,8 +47,10 @@ setup(
     ],
     keywords='concurrent future deferred aiodataloader',
     py_modules=['aiodataloader'],
+    python_requires='>=3.6',
     extras_require={
         'lint': ['flake8', 'mypy'],
         'test': tests_require,
     },
+    install_requires=["typing_extensions>=4.3.0"],
     tests_require=tests_require, )

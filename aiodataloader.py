@@ -1,29 +1,74 @@
+import sys
+
+from asyncio import AbstractEventLoop, Future
 from asyncio import gather, ensure_future, get_event_loop, iscoroutine, iscoroutinefunction
 from collections import namedtuple
-from collections.abc import Iterable
 from functools import partial
 
-from typing import List  # flake8: noqa
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    Dict,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+)
 
+if sys.version_info >= (3, 8):
+    from typing import Protocol
+else:
+    from typing_extensions import Protocol
+
+if sys.version_info >= (3, 10):
+    from typing import TypeGuard
+else:
+    from typing_extensions import TypeGuard
 
 __version__ = '0.2.1'
+
+
+KeyT = TypeVar("KeyT")
+ReturnT = TypeVar("ReturnT")
+CacheKeyT = TypeVar("CacheKeyT")
+DataLoaderT = TypeVar("DataLoaderT", bound="DataLoader[Any, Any]")
+T = TypeVar("T")
+
+
+def iscoroutinefunctionorpartial(
+    fn: Union[Callable[..., ReturnT], "partial[ReturnT]"],
+) -> TypeGuard[Callable[..., Coroutine[Any, Any, ReturnT]]]:
+    return iscoroutinefunction(fn.func if isinstance(fn, partial) else fn)
+
+
+class BatchLoadFnProto(Protocol[KeyT, ReturnT]):
+    async def __call__(self, keys: List[KeyT]) -> List[ReturnT]:
+        ...
+
 
 Loader = namedtuple('Loader', 'key,future')
 
 
-def iscoroutinefunctionorpartial(fn):
-    return iscoroutinefunction(fn.func if isinstance(fn, partial) else fn)
+class DataLoader(Generic[KeyT, ReturnT]):
 
+    batch: bool = True
+    max_batch_size: Optional[int] = None
+    cache: Optional[bool] = True
 
-class DataLoader(object):
-
-    batch = True
-    max_batch_size = None  # type: int
-    cache = True
-
-    def __init__(self, batch_load_fn=None, batch=None, max_batch_size=None,
-                 cache=None, get_cache_key=None, cache_map=None, loop=None):
-
+    def __init__(
+        self,
+        batch_load_fn: Optional[BatchLoadFnProto[KeyT, ReturnT]] = None,
+        batch: Optional[bool] = None,
+        max_batch_size: Optional[int] = None,
+        cache: Optional[bool] = None,
+        get_cache_key: Optional[Callable[[KeyT], Union[CacheKeyT, KeyT]]] = None,
+        cache_map: Optional[Dict[Union[CacheKeyT, KeyT], "Future[ReturnT]"]] = None,
+        loop: Optional[AbstractEventLoop] = None,
+    ):
         self.loop = loop or get_event_loop()
 
         if batch_load_fn is not None:
@@ -50,9 +95,9 @@ class DataLoader(object):
         self.get_cache_key = get_cache_key or (lambda x: x)
 
         self._cache = cache_map if cache_map is not None else {}
-        self._queue = []  # type: List[Loader]
+        self._queue: List[Loader] = []
 
-    def load(self, key=None):
+    def load(self, key: Optional[KeyT] = None) -> "Future[ReturnT]":
         """
         Loads a key, returning a `Future` for the value represented by that key.
         """
@@ -79,7 +124,7 @@ class DataLoader(object):
         self.do_resolve_reject(key, future)
         return future
 
-    def do_resolve_reject(self, key, future):
+    def do_resolve_reject(self, key: KeyT, future: "Future[ReturnT]") -> None:
         # Enqueue this Future to be dispatched.
         self._queue.append(Loader(
             key=key,
@@ -96,7 +141,7 @@ class DataLoader(object):
                 # Otherwise dispatch the (queue of one) immediately.
                 dispatch_queue(self)
 
-    def load_many(self, keys):
+    def load_many(self, keys: Iterable[KeyT]) -> "Future[List[ReturnT]]":
         """
         Loads multiple keys, returning a list of values
 
@@ -117,7 +162,7 @@ class DataLoader(object):
 
         return gather(*[self.load(key) for key in keys])
 
-    def clear(self, key):
+    def clear(self: DataLoaderT, key: KeyT) -> DataLoaderT:
         """
         Clears the value at `key` from the cache, if it exists. Returns itself for
         method chaining.
@@ -126,7 +171,7 @@ class DataLoader(object):
         self._cache.pop(cache_key, None)
         return self
 
-    def clear_all(self):
+    def clear_all(self: DataLoaderT) -> DataLoaderT:
         """
         Clears the entire cache. To be used when some event results in unknown
         invalidations across this particular `DataLoader`. Returns itself for
@@ -135,7 +180,7 @@ class DataLoader(object):
         self._cache.clear()
         return self
 
-    def prime(self, key, value):
+    def prime(self: DataLoaderT, key: KeyT, value: ReturnT) -> DataLoaderT:
         """
         Adds the provied key and value to the cache. If the key already exists, no
         change is made. Returns itself for method chaining.
@@ -157,18 +202,19 @@ class DataLoader(object):
         return self
 
 
-def enqueue_post_future_job(loop, loader):
-    async def dispatch():
+def enqueue_post_future_job(loop: AbstractEventLoop, loader: DataLoader[Any, Any]) -> None:
+    async def dispatch() -> None:
         dispatch_queue(loader)
+
     loop.call_soon(ensure_future, dispatch())
 
 
-def get_chunks(iterable_obj, chunk_size=1):
+def get_chunks(iterable_obj: List[T], chunk_size: int = 1) -> Iterator[List[T]]:
     chunk_size = max(1, chunk_size)
     return (iterable_obj[i:i + chunk_size] for i in range(0, len(iterable_obj), chunk_size))
 
 
-def dispatch_queue(loader):
+def dispatch_queue(loader: DataLoader[Any, Any]) -> None:
     """
     Given the current state of a Loader instance, perform a batch load
     from its current queue.
@@ -192,7 +238,7 @@ def dispatch_queue(loader):
         ensure_future(dispatch_queue_batch(loader, queue))
 
 
-async def dispatch_queue_batch(loader, queue):
+async def dispatch_queue_batch(loader: DataLoader[Any, Any], queue: List[Loader]) -> None:
     # Collect all keys to be loaded in this dispatch
     keys = [ql.key for ql in queue]
 
@@ -243,7 +289,7 @@ async def dispatch_queue_batch(loader, queue):
         return failed_dispatch(loader, queue, e)
 
 
-def failed_dispatch(loader, queue, error):
+def failed_dispatch(loader: DataLoader[Any, Any], queue: List[Loader], error: Exception) -> None:
     """
     Do not cache individual loads if the entire batch dispatch fails,
     but still reject each request so they do not hang.
