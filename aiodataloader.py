@@ -92,7 +92,10 @@ class DataLoader(Generic[KeyT, ReturnT]):
         if cache is not None:
             self.cache = cache
 
-        self.get_cache_key = get_cache_key or (lambda x: x)
+        if get_cache_key is not None:
+            self.get_cache_key = get_cache_key
+        if not hasattr(self, 'get_cache_key'):
+            self.get_cache_key = lambda x: x
 
         self._cache = cache_map if cache_map is not None else {}
         self._queue: List[Loader] = []
