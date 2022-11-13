@@ -19,11 +19,6 @@ from typing import (
     Union,
 )
 
-if sys.version_info >= (3, 8):
-    from typing import Protocol
-else:
-    from typing_extensions import Protocol
-
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
 else:
@@ -45,11 +40,6 @@ def iscoroutinefunctionorpartial(
     return iscoroutinefunction(fn.func if isinstance(fn, partial) else fn)
 
 
-class BatchLoadFnProto(Protocol[KeyT, ReturnT]):
-    async def __call__(self, keys: List[KeyT]) -> List[ReturnT]:
-        ...
-
-
 Loader = namedtuple('Loader', 'key,future')
 
 
@@ -61,7 +51,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
 
     def __init__(
         self,
-        batch_load_fn: Optional[BatchLoadFnProto[KeyT, ReturnT]] = None,
+        batch_load_fn: Optional[Callable[[List[KeyT]], Coroutine[Any, Any, List[ReturnT]]]] = None,
         batch: Optional[bool] = None,
         max_batch_size: Optional[int] = None,
         cache: Optional[bool] = None,
