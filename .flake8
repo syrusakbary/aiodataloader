@@ -1,0 +1,6 @@
+[flake8]
+application_import_names = aiodataloader
+exclude = .git,.mypy_cache,.pytest_cache,.tox,.venv,__pycache__,build,dist,docs
+ignore = E203
+import_order_style = smarkets
+max-line-length = 88

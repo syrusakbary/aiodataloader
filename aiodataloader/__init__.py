@@ -1,10 +1,15 @@
 import sys
-
-from asyncio import AbstractEventLoop, Future
-from asyncio import gather, ensure_future, get_event_loop, iscoroutine, iscoroutinefunction
+from asyncio import (
+    AbstractEventLoop,
+    ensure_future,
+    Future,
+    gather,
+    get_event_loop,
+    iscoroutine,
+    iscoroutinefunction,
+)
 from collections import namedtuple
 from functools import partial
-
 from typing import (
     Any,
     Callable,
@@ -24,8 +29,7 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeGuard
 
-__version__ = '0.2.1'
-
+__version__ = "0.2.1"
 
 KeyT = TypeVar("KeyT")
 ReturnT = TypeVar("ReturnT")
@@ -40,7 +44,7 @@ def iscoroutinefunctionorpartial(
     return iscoroutinefunction(fn.func if isinstance(fn, partial) else fn)
 
 
-Loader = namedtuple('Loader', 'key,future')
+Loader = namedtuple("Loader", "key,future")
 
 
 class DataLoader(Generic[KeyT, ReturnT]):
@@ -51,7 +55,9 @@ class DataLoader(Generic[KeyT, ReturnT]):
 
     def __init__(
         self,
-        batch_load_fn: Optional[Callable[[List[KeyT]], Coroutine[Any, Any, List[ReturnT]]]] = None,
+        batch_load_fn: Optional[
+            Callable[[List[KeyT]], Coroutine[Any, Any, List[ReturnT]]]
+        ] = None,
         batch: Optional[bool] = None,
         max_batch_size: Optional[int] = None,
         cache: Optional[bool] = None,
@@ -64,14 +70,17 @@ class DataLoader(Generic[KeyT, ReturnT]):
         if batch_load_fn is not None:
             self.batch_load_fn = batch_load_fn
 
-        assert iscoroutinefunctionorpartial(self.batch_load_fn), "batch_load_fn must be coroutine. Received: {}".format(
-            self.batch_load_fn)
+        assert iscoroutinefunctionorpartial(
+            self.batch_load_fn
+        ), "batch_load_fn must be coroutine. Received: {}".format(self.batch_load_fn)
 
         if not callable(self.batch_load_fn):
-            raise TypeError((
-                'DataLoader must be have a batch_load_fn which accepts '
-                'Iterable<key> and returns Future<Iterable<value>>, but got: {}.'
-            ).format(batch_load_fn))
+            raise TypeError(
+                (
+                    "DataLoader must be have a batch_load_fn which accepts "
+                    "Iterable<key> and returns Future<Iterable<value>>, but got: {}."
+                ).format(batch_load_fn)
+            )
 
         if batch is not None:
             self.batch = batch
@@ -84,7 +93,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
 
         if get_cache_key is not None:
             self.get_cache_key = get_cache_key
-        if not hasattr(self, 'get_cache_key'):
+        if not hasattr(self, "get_cache_key"):
             self.get_cache_key = lambda x: x
 
         self._cache = cache_map if cache_map is not None else {}
@@ -95,10 +104,12 @@ class DataLoader(Generic[KeyT, ReturnT]):
         Loads a key, returning a `Future` for the value represented by that key.
         """
         if key is None:
-            raise TypeError((
-                'The loader.load() function must be called with a value, '
-                'but got: {}.'
-            ).format(key))
+            raise TypeError(
+                (
+                    "The loader.load() function must be called with a value, "
+                    "but got: {}."
+                ).format(key)
+            )
 
         cache_key = self.get_cache_key(key)
 
@@ -119,10 +130,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
 
     def do_resolve_reject(self, key: KeyT, future: "Future[ReturnT]") -> None:
         # Enqueue this Future to be dispatched.
-        self._queue.append(Loader(
-            key=key,
-            future=future
-        ))
+        self._queue.append(Loader(key=key, future=future))
         # Determine if a dispatch of this queue should be scheduled.
         # A single dispatch should be scheduled per queue at the time when the
         # queue changes from "empty" to "full".
@@ -148,10 +156,12 @@ class DataLoader(Generic[KeyT, ReturnT]):
         >>> )
         """
         if not isinstance(keys, Iterable):
-            raise TypeError((
-                'The loader.load_many() function must be called with Iterable<key> '
-                'but got: {}.'
-            ).format(keys))
+            raise TypeError(
+                (
+                    "The loader.load_many() function must be called with Iterable<key> "
+                    "but got: {}."
+                ).format(keys)
+            )
 
         return gather(*[self.load(key) for key in keys])
 
@@ -195,7 +205,9 @@ class DataLoader(Generic[KeyT, ReturnT]):
         return self
 
 
-def enqueue_post_future_job(loop: AbstractEventLoop, loader: DataLoader[Any, Any]) -> None:
+def enqueue_post_future_job(
+    loop: AbstractEventLoop, loader: DataLoader[Any, Any]
+) -> None:
     async def dispatch() -> None:
         dispatch_queue(loader)
 
@@ -204,7 +216,10 @@ def enqueue_post_future_job(loop: AbstractEventLoop, loader: DataLoader[Any, Any
 
 def get_chunks(iterable_obj: List[T], chunk_size: int = 1) -> Iterator[List[T]]:
     chunk_size = max(1, chunk_size)
-    return (iterable_obj[i:i + chunk_size] for i in range(0, len(iterable_obj), chunk_size))
+    return (
+        iterable_obj[i : i + chunk_size]
+        for i in range(0, len(iterable_obj), chunk_size)
+    )
 
 
 def dispatch_queue(loader: DataLoader[Any, Any]) -> None:
@@ -223,15 +238,14 @@ def dispatch_queue(loader: DataLoader[Any, Any]) -> None:
     if max_batch_size and max_batch_size < len(queue):
         chunks = get_chunks(queue, max_batch_size)
         for chunk in chunks:
-            ensure_future(dispatch_queue_batch(
-                loader,
-                chunk
-            ))
+            ensure_future(dispatch_queue_batch(loader, chunk))
     else:
         ensure_future(dispatch_queue_batch(loader, queue))
 
 
-async def dispatch_queue_batch(loader: DataLoader[Any, Any], queue: List[Loader]) -> None:
+async def dispatch_queue_batch(
+    loader: DataLoader[Any, Any], queue: List[Loader]
+) -> None:
     # Collect all keys to be loaded in this dispatch
     keys = [ql.key for ql in queue]
 
@@ -243,32 +257,38 @@ async def dispatch_queue_batch(loader: DataLoader[Any, Any], queue: List[Loader]
         return failed_dispatch(
             loader,
             queue,
-            TypeError((
-                'DataLoader must be constructed with a function which accepts '
-                'Iterable<key> and returns Future<Iterable<value>>, but the function did '
-                'not return a Coroutine: {}.'
-            ).format(batch_future))
+            TypeError(
+                (
+                    "DataLoader must be constructed with a function which accepts "
+                    "Iterable<key> and returns Future<Iterable<value>>, but the "
+                    "function did not return a Coroutine: {}."
+                ).format(batch_future)
+            ),
         )
 
     try:
         values = await batch_future
         if not isinstance(values, Iterable):
-            raise TypeError((
-                'DataLoader must be constructed with a function which accepts '
-                'Iterable<key> and returns Future<Iterable<value>>, but the function did '
-                'not return a Future of a Iterable: {}.'
-            ).format(values))
+            raise TypeError(
+                (
+                    "DataLoader must be constructed with a function which accepts "
+                    "Iterable<key> and returns Future<Iterable<value>>, but the "
+                    "function did not return a Future of a Iterable: {}."
+                ).format(values)
+            )
 
         values = list(values)
         if len(values) != len(keys):
-            raise TypeError((
-                'DataLoader must be constructed with a function which accepts '
-                'Iterable<key> and returns Future<Iterable<value>>, but the function did '
-                'not return a Future of a Iterable with the same length as the Iterable '
-                'of keys.'
-                '\n\nKeys:\n{}'
-                '\n\nValues:\n{}'
-            ).format(keys, values))
+            raise TypeError(
+                (
+                    "DataLoader must be constructed with a function which accepts "
+                    "Iterable<key> and returns Future<Iterable<value>>, but the "
+                    "function did not return a Future of a Iterable with the same "
+                    "length as the Iterable of keys."
+                    "\n\nKeys:\n{}"
+                    "\n\nValues:\n{}"
+                ).format(keys, values)
+            )
 
         # Step through the values, resolving or rejecting each Future in the
         # loaded queue.
@@ -282,7 +302,9 @@ async def dispatch_queue_batch(loader: DataLoader[Any, Any], queue: List[Loader]
         return failed_dispatch(loader, queue, e)
 
 
-def failed_dispatch(loader: DataLoader[Any, Any], queue: List[Loader], error: Exception) -> None:
+def failed_dispatch(
+    loader: DataLoader[Any, Any], queue: List[Loader], error: Exception
+) -> None:
     """
     Do not cache individual loads if the entire batch dispatch fails,
     but still reject each request so they do not hang.
