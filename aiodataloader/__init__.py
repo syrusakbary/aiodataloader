@@ -1,4 +1,3 @@
-import sys
 from asyncio import (
     AbstractEventLoop,
     ensure_future,
@@ -24,11 +23,6 @@ from typing import (
     Union,
 )
 
-if sys.version_info >= (3, 10):
-    from typing import TypeGuard
-else:
-    from typing_extensions import TypeGuard
-
 __version__ = "0.2.1"
 
 KeyT = TypeVar("KeyT")
@@ -40,7 +34,7 @@ T = TypeVar("T")
 
 def iscoroutinefunctionorpartial(
     fn: Union[Callable[..., ReturnT], "partial[ReturnT]"],
-) -> TypeGuard[Callable[..., Coroutine[Any, Any, ReturnT]]]:
+) -> bool:
     return iscoroutinefunction(fn.func if isinstance(fn, partial) else fn)
 
 
