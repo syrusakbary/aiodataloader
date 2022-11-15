@@ -1,0 +1,14 @@
+[tool.black]
+target-version = ["py36", "py37", "py38", "py39", "py310", "py311"]
+
+[tool.isort]
+force_single_line = false
+known_first_party = "aiodataloader"
+order_by_type = false
+profile = "black"
+
+[tool.mypy]
+files = ["aiodataloader/**/*.py", "setup.py", "test_aiodataloader.py"]
+follow_imports = "silent"
+ignore_missing_imports = true
+strict = true
