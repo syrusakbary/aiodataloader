@@ -17,15 +17,9 @@ loading and caching layer within web server product code. This ultimately became
 the underpinning for Facebook's GraphQL server implementation and type
 definitions.
 
-DataLoader is a simplified version of this original idea implemented in
-Python for AsyncIO services. DataLoader is often used when implementing a
-[graphene][] service, though it is also broadly useful in other situations.
-
-DataLoader is provided so that it may be useful not just to build GraphQL
-services with AsyncIO but also as a publicly available reference implementation
-of this concept in the hopes that it can be ported to other languages. If you
-port DataLoader to another language, please open an issue to include a link from
-this repository.
+Asyncio DataLoader is a Python port of the original JavaScript [DataLoader][]
+implementation. DataLoader is often used when implementing a [GraphQL][] service,
+though it is also broadly useful in other situations.
 
 
 ## Getting Started
@@ -59,7 +53,7 @@ class UserLoader(DataLoader):
 user_loader = UserLoader()
 ```
 
-A batch loading function accepts a Iterable of keys, and returns a Promise which
+A batch loading function accepts an Iterable of keys, and returns a Promise which
 resolves to a List of values[<sup>*</sup>](#batch-function).
 
 Then load individual values from the loader. DataLoader will coalesce all
@@ -94,7 +88,7 @@ minimal outgoing data requests.
 #### Batch Function
 
 A batch loading function accepts an List of keys, and returns a Future which
-resolves to an List of values. There are a few constraints that must be upheld:
+resolves to a List of values. There are a few constraints that must be upheld:
 
  * The List of values must be the same length as the List of keys.
  * Each index in the List of values must correspond to the same index in the List of keys.
@@ -275,7 +269,7 @@ Each `DataLoader` instance contains a unique memoized cache. Use caution when
 used in long-lived applications or those which serve many users with different
 access permissions and consider creating a new instance per web request.
 
-##### `new DataLoader(batch_load_fn, **options)`
+##### `DataLoader(batch_load_fn, **options)`
 
 Create a new `DataLoader` given a batch loading function and options.
 
@@ -349,7 +343,7 @@ change is made. (To forcefully prime the cache, clear the key first with
 
 ## Using with GraphQL
 
-DataLoader pairs nicely well with [GraphQL][graphene]. GraphQL fields are
+DataLoader pairs nicely well with [GraphQL][]. GraphQL fields are
 designed to be stand-alone functions. Without a caching or batching mechanism,
 it's easy for a naive GraphQL server to issue new database requests each time a
 field is resolved.
@@ -376,9 +370,8 @@ Consider the following GraphQL request:
 Naively, if `me`, `bestFriend` and `friends` each need to request the backend,
 there could be at most 13 database requests!
 
-When using DataLoader, we could define the `User` type using the
-[SQLite](examples/SQL.md) example with clearer code and at most 4 database requests,
-and possibly fewer if there are cache hits.
+When using DataLoader with [graphene][], we could define the `User` type with clearer code and
+at most 4 database requests, and possibly fewer if there are cache hits.
 
 ```python
 class User(graphene.ObjectType):
@@ -422,7 +415,7 @@ pic = await loaders.cdn_urls.load(user.raw_pic_url)
 
 Creating an object where each key is a `DataLoader` is one common pattern which
 provides a single value to pass around to code which needs to perform
-data loading, such as part of the `root_value` in a [graphql][] request.
+data loading, such as part of the `root_value` in a [GraphQL][] request.
 
 ### Loading by alternative keys.
 
@@ -470,6 +463,8 @@ short-lived.
 
 
 [@schrockn]: https://github.com/schrockn
+[DataLoader]: https://github.com/graphql/dataloader
+[GraphQL]: https://graphql.org
 [dict]: https://docs.python.org/3/tutorial/datastructures.html#dictionaries
 [graphene]: https://github.com/graphql-python/graphene
 [graphql-core]: https://github.com/graphql-python/graphql-core
