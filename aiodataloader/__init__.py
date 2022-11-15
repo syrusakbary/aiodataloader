@@ -14,11 +14,11 @@ from typing import (
     Any,
     Callable,
     Coroutine,
-    Dict,
     Generic,
     Iterable,
     Iterator,
     List,
+    MutableMapping,
     Optional,
     TypeVar,
     Union,
@@ -62,7 +62,9 @@ class DataLoader(Generic[KeyT, ReturnT]):
         max_batch_size: Optional[int] = None,
         cache: Optional[bool] = None,
         get_cache_key: Optional[Callable[[KeyT], Union[CacheKeyT, KeyT]]] = None,
-        cache_map: Optional[Dict[Union[CacheKeyT, KeyT], "Future[ReturnT]"]] = None,
+        cache_map: Optional[
+            MutableMapping[Union[CacheKeyT, KeyT], "Future[ReturnT]"]
+        ] = None,
         loop: Optional[AbstractEventLoop] = None,
     ):
         self.loop = loop or get_event_loop()
