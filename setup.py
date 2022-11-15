@@ -17,7 +17,7 @@ def get_version(filename):
     raise RuntimeError("Unable to find version string.")
 
 
-version = get_version('aiodataloader.py')
+version = get_version('aiodataloader/__init__.py')
 
 tests_require = [
     'pytest>=3.6', 'pytest-cov', 'coveralls', 'mock', 'pytest-asyncio'
