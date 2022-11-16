@@ -1,5 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aiodataloader"
+dynamic = ["version"]
+authors = [{ name="Syrus Akbary", email="me@syrusakbary.com" }]
+description = "Asyncio DataLoader implementation for Python"
+readme = "README.md"
+requires-python = ">=3.6"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+]
+keywords = ["concurrent", "future", "deferred", "aiodataloader"]
+dependencies = ["typing_extensions>=4.1.1"]
+
+[project.optional-dependencies]
+lint = ["black", "flake8", "flake8-import-order", "mypy"]
+test = ["pytest>=3.6", "pytest-cov", "coveralls", "mock", "pytest-asyncio"]
+
+[project.urls]
+"Homepage" = "https://github.com/syrusakbary/aiodataloader"
+
 [tool.black]
 target-version = ["py36", "py37", "py38", "py39", "py310", "py311"]
+
+[tool.hatch.version]
+path = "aiodataloader/__init__.py"
 
 [tool.isort]
 force_single_line = false
@@ -8,7 +45,7 @@ order_by_type = false
 profile = "black"
 
 [tool.mypy]
-files = ["aiodataloader/**/*.py", "setup.py", "test_aiodataloader.py"]
+files = ["aiodataloader/**/*.py", "test_aiodataloader.py"]
 follow_imports = "silent"
 ignore_missing_imports = true
 strict = true
