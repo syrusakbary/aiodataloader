@@ -78,7 +78,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
         if not callable(self.batch_load_fn):
             raise TypeError(
                 (
-                    "DataLoader must be have a batch_load_fn which accepts "
+                    "DataLoader must have a batch_load_fn which accepts "
                     "Iterable<key> and returns Future<Iterable<value>>, but got: {}."
                 ).format(batch_load_fn)
             )
