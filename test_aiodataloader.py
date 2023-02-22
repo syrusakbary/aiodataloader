@@ -412,3 +412,21 @@ async def test_dataloader_clear_with_missing_key_works() -> None:
     a_loader, a_load_calls = a_loader_result
 
     assert a_loader.clear("A1") == a_loader
+
+
+async def test_load_no_key() -> None:
+    async def call_fn(keys: List[int]) -> List[int]:
+        return keys
+
+    identity_loader = DataLoader(call_fn)
+    with pytest.raises(TypeError):
+        identity_loader.load()  # type: ignore
+
+
+async def test_load_none() -> None:
+    async def call_fn(keys: List[int]) -> List[int]:
+        return keys
+
+    identity_loader = DataLoader(call_fn)
+    with pytest.raises(TypeError):
+        identity_loader.load(None)  # type: ignore
