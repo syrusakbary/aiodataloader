@@ -48,7 +48,6 @@ Loader = namedtuple("Loader", "key,future")
 
 
 class DataLoader(Generic[KeyT, ReturnT]):
-
     batch: bool = True
     max_batch_size: Optional[int] = None
     cache: Optional[bool] = True
