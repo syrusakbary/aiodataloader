@@ -100,7 +100,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
         self._cache = cache_map if cache_map is not None else {}
         self._queue: List[Loader] = []
 
-    def load(self, key: Optional[KeyT] = None) -> "Future[ReturnT]":
+    def load(self, key: KeyT) -> "Future[ReturnT]":
         """
         Loads a key, returning a `Future` for the value represented by that key.
         """
