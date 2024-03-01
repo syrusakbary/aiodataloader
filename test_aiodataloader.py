@@ -3,6 +3,7 @@ from functools import partial
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, TypeVar, Union
 
 import pytest
+import asyncio
 
 from aiodataloader import DataLoader
 
@@ -430,3 +431,29 @@ async def test_load_none() -> None:
     identity_loader = DataLoader(call_fn)
     with pytest.raises(TypeError):
         identity_loader.load(None)  # type: ignore
+
+async def main():
+    await test_build_a_simple_data_loader()
+    await test_can_build_a_data_loader_from_a_partial()
+    await test_supports_loading_multiple_keys_in_one_call()
+    await test_batches_multiple_requests()
+    await test_batches_multiple_requests_with_max_batch_sizes()
+    await test_coalesces_identical_requests()
+    await test_caches_repeated_requests()
+    await test_clears_single_value_in_loader()
+    await test_clears_all_values_in_loader()
+    await test_allows_priming_the_cache()
+    await test_does_not_prime_keys_that_already_exist()
+    await test_resolves_to_error_to_indicate_failure()
+    await test_can_represent_failures_and_successes_simultaneously()
+    await test_caches_failed_fetches()
+    await test_caches_failed_fetches_2()
+    await test_batches_loads_occuring_within_promises()
+    await test_catches_error_if_loader_resolver_fails()
+    await test_can_call_a_loader_from_a_loader()
+    await test_dataloader_clear_with_missing_key_works()
+    await test_load_no_key()
+    await test_load_none()
+
+asyncio.run(main())
+
