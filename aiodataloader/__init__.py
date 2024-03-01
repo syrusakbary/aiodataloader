@@ -1,7 +1,7 @@
 import sys
 from asyncio import (
     AbstractEventLoop,
-    ensure_future,
+    create_task,
     Future,
     gather,
     get_event_loop,
@@ -212,7 +212,7 @@ def enqueue_post_future_job(
     async def dispatch() -> None:
         dispatch_queue(loader)
 
-    loop.call_soon(ensure_future, dispatch())
+    loop.call_soon(create_task, dispatch())
 
 
 def get_chunks(iterable_obj: List[T], chunk_size: int = 1) -> Iterator[List[T]]:
@@ -239,9 +239,9 @@ def dispatch_queue(loader: DataLoader[Any, Any]) -> None:
     if max_batch_size and max_batch_size < len(queue):
         chunks = get_chunks(queue, max_batch_size)
         for chunk in chunks:
-            ensure_future(dispatch_queue_batch(loader, chunk))
+            create_task(dispatch_queue_batch(loader, chunk))
     else:
-        ensure_future(dispatch_queue_batch(loader, queue))
+        create_task(dispatch_queue_batch(loader, queue))
 
 
 async def dispatch_queue_batch(
