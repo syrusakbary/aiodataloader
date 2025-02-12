@@ -124,7 +124,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
         future = self.loop.create_future()
         # If caching, cache this Future.
         if self.cache:
-            self._cache[cache_key] = future
+            self.cache.set(cache_key, future)
 
         self.do_resolve_reject(key, future)
         return future
@@ -201,7 +201,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
             else:
                 future.set_result(value)
 
-            self._cache[cache_key] = future
+            self._cache.set(cache_key, future)
 
         return self
 
