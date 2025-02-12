@@ -298,9 +298,10 @@ async def test_can_represent_failures_and_successes_simultaneously() -> None:
 
 
 async def test_does_not_attempt_to_set_cancelled_future() -> None:
+    exception_handler = Mock()
     loop = get_running_loop()
-    loop.set_exception_handler(Mock())
-    fut = Future()
+    loop.set_exception_handler(exception_handler)
+    fut: Future[None] = Future()
 
     async def call_fn(keys: List[int]) -> List[int]:
         await fut
@@ -319,7 +320,6 @@ async def test_does_not_attempt_to_set_cancelled_future() -> None:
     # Give time to the event loop to call the exception handler if needed
     await sleep(0.001)
 
-    exception_handler = loop.get_exception_handler()
     exception_handler.assert_not_called()
 
 
