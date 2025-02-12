@@ -196,10 +196,11 @@ class DataLoader(Generic[KeyT, ReturnT]):
             # Cache a rejected future if the value is an Error, in order to match
             # the behavior of load(key).
             future = self.loop.create_future()
-            if isinstance(value, Exception):
-                future.set_exception(value)
-            else:
-                future.set_result(value)
+            if not future.cancelled():
+                if isinstance(value, Exception):
+                    future.set_exception(value)
+                else:
+                    future.set_result(value)
 
             self._cache[cache_key] = future
 
@@ -294,10 +295,11 @@ async def dispatch_queue_batch(
         # Step through the values, resolving or rejecting each Future in the
         # loaded queue.
         for ql, value in zip(queue, values):
-            if isinstance(value, Exception):
-                ql.future.set_exception(value)
-            else:
-                ql.future.set_result(value)
+            if not ql.future.cancelled():
+                if isinstance(value, Exception):
+                    ql.future.set_exception(value)
+                else:
+                    ql.future.set_result(value)
 
     except Exception as e:
         return failed_dispatch(loader, queue, e)
@@ -312,4 +314,5 @@ def failed_dispatch(
     """
     for ql in queue:
         loader.clear(ql.key)
-        ql.future.set_exception(error)
+        if not ql.future.cancelled():
+            ql.future.set_exception(error)
