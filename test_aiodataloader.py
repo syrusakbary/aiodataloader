@@ -1,6 +1,7 @@
-from asyncio import gather
+from asyncio import CancelledError, Future, gather, get_running_loop, sleep
 from functools import partial
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, TypeVar, Union
+from unittest.mock import Mock
 
 import pytest
 
@@ -294,6 +295,32 @@ async def test_can_represent_failures_and_successes_simultaneously() -> None:
     value2 = await promise2
     assert value2 == 2
     assert load_calls == [[1, 2]]
+
+
+async def test_does_not_attempt_to_set_cancelled_future() -> None:
+    loop = get_running_loop()
+    loop.set_exception_handler(Mock())
+    fut = Future()
+
+    async def call_fn(keys: List[int]) -> List[int]:
+        await fut
+        return keys
+
+    trigger_loader = DataLoader(call_fn)
+
+    promise = trigger_loader.load(1)
+
+    promise.cancel()
+    fut.set_result(None)
+
+    with pytest.raises(CancelledError):
+        await promise
+
+    # Give time to the event loop to call the exception handler if needed
+    await sleep(0.001)
+
+    exception_handler = loop.get_exception_handler()
+    exception_handler.assert_not_called()
 
 
 async def test_caches_failed_fetches() -> None:
