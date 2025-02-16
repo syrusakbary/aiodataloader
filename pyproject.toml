@@ -25,14 +25,18 @@ keywords = ["concurrent", "future", "deferred", "aiodataloader"]
 dependencies = ["typing_extensions>=4.1.1"]
 
 [project.optional-dependencies]
-lint = ["black", "flake8", "flake8-import-order", "mypy"]
-test = ["pytest>=3.6", "pytest-cov", "coveralls", "mock", "pytest-asyncio"]
+lint = ["black", "flake8", "flake8-import-order", "hatch", "mypy"]
+test = ["coveralls", "hatch",  "mock", "pytest>=3.6", "pytest-asyncio", "pytest-cov"]
 
 [project.urls]
 "Homepage" = "https://github.com/syrusakbary/aiodataloader"
 
 [tool.black]
 target-version = ["py37", "py38", "py39", "py310", "py311"]
+
+[tool.hatch.envs.default.scripts]
+lint = "flake8 && black --check . && mypy"
+test = "pytest --cov=aiodataloader"
 
 [tool.hatch.version]
 path = "aiodataloader/__init__.py"
