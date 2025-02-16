@@ -6,7 +6,6 @@ data sources such as databases or web services via batching and caching.
 
 [![PyPI version](https://badge.fury.io/py/aiodataloader.svg)](https://badge.fury.io/py/aiodataloader)
 ![Test Status](https://github.com/syrusakbary/aiodataloader/actions/workflows/test.yml/badge.svg)
-![Lint Status](https://github.com/syrusakbary/aiodataloader/actions/workflows/lint.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/syrusakbary/aiodataloader/badge.svg?branch=master&service=github)](https://coveralls.io/github/syrusakbary/aiodataloader?branch=master)
 
 A port of the "Loader" API originally developed by [@schrockn][] at Facebook in
