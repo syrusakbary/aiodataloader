@@ -23,7 +23,4 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[lint]
     - name: Run code quality tests
-      run: |
-        black --check .
-        flake8
-        mypy
+      run: hatch run lint
