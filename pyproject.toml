@@ -25,6 +25,7 @@ keywords = ["concurrent", "future", "deferred", "aiodataloader"]
 dependencies = ["typing_extensions>=4.1.1"]
 
 [project.optional-dependencies]
+build = ["hatch"]
 lint = ["black", "flake8", "flake8-import-order", "hatch", "mypy"]
 test = ["coveralls", "hatch",  "mock", "pytest>=3.6", "pytest-asyncio", "pytest-cov"]
 
