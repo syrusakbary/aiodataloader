@@ -4,7 +4,7 @@ DataLoader is a generic utility to be used as part of your application's data
 fetching layer to provide a simplified and consistent API over various remote
 data sources such as databases or web services via batching and caching.
 
-[![PyPI version](https://badge.fury.io/py/aiodataloader.svg)](https://badge.fury.io/py/aiodataloader)
+[![PyPI - Version](https://img.shields.io/pypi/v/aiodataloader)](https://pypi.org/project/aiodataloader/)
 ![Test Status](https://github.com/syrusakbary/aiodataloader/actions/workflows/test.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/syrusakbary/aiodataloader/badge.svg?branch=master&service=github)](https://coveralls.io/github/syrusakbary/aiodataloader?branch=master)
 
