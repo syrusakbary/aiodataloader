@@ -6,7 +6,6 @@ from asyncio import (
     gather,
     get_event_loop,
     iscoroutine,
-    iscoroutinefunction,
 )
 from collections import namedtuple
 from functools import partial
@@ -23,6 +22,11 @@ from typing import (
     TypeVar,
     Union,
 )
+
+if sys.version_info >= (3, 14):
+    from inspect import iscoroutinefunction
+else:
+    from asyncio import iscoroutinefunction
 
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
