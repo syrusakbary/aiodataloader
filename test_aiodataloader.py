@@ -325,8 +325,7 @@ async def test_does_not_attempt_to_set_cancelled_future() -> None:
 
 async def test_does_not_attempt_to_set_future_with_result() -> None:
     """
-    Test that demonstrates why done() is better than cancelled().
-    
+    Test that demonstrates why done() is better than cancelled().    
     If a future already has a result set (but is not cancelled), checking only
     cancelled() would allow us to try setting it again, causing InvalidStateError.
     Using done() prevents this.
@@ -363,7 +362,6 @@ async def test_does_not_attempt_to_set_future_with_result() -> None:
 async def test_does_not_attempt_to_set_future_with_exception() -> None:
     """
     Test that demonstrates why done() is better than cancelled().
-    
     If a future already has an exception set (but is not cancelled), checking only
     cancelled() would allow us to try setting it again, causing InvalidStateError.
     Using done() prevents this.
