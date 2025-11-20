@@ -323,6 +323,115 @@ async def test_does_not_attempt_to_set_cancelled_future() -> None:
     exception_handler.assert_not_called()
 
 
+async def test_does_not_attempt_to_set_future_with_result() -> None:
+    """
+    Test that demonstrates why done() is better than cancelled().
+    
+    If a future already has a result set (but is not cancelled), checking only
+    cancelled() would allow us to try setting it again, causing InvalidStateError.
+    Using done() prevents this.
+    """
+    exception_handler = Mock()
+    loop = get_running_loop()
+    loop.set_exception_handler(exception_handler)
+    fut: Future[None] = Future()
+
+    async def call_fn(keys: List[int]) -> List[int]:
+        await fut
+        return keys
+
+    trigger_loader = DataLoader(call_fn)
+
+    promise = trigger_loader.load(1)
+
+    # Set the future to done with a result BEFORE the batch loader tries to set it
+    # This simulates a race condition or external completion
+    promise.set_result(999)
+    fut.set_result(None)
+
+    # The promise should return the value we set, not the loader's value
+    result = await promise
+    assert result == 999
+
+    # Give time to the event loop to call the exception handler if needed
+    await sleep(0.001)
+
+    # No exception should be raised because done() check prevents InvalidStateError
+    exception_handler.assert_not_called()
+
+
+async def test_does_not_attempt_to_set_future_with_exception() -> None:
+    """
+    Test that demonstrates why done() is better than cancelled().
+    
+    If a future already has an exception set (but is not cancelled), checking only
+    cancelled() would allow us to try setting it again, causing InvalidStateError.
+    Using done() prevents this.
+    """
+    exception_handler = Mock()
+    loop = get_running_loop()
+    loop.set_exception_handler(exception_handler)
+    fut: Future[None] = Future()
+
+    async def call_fn(keys: List[int]) -> List[int]:
+        await fut
+        return keys
+
+    trigger_loader = DataLoader(call_fn)
+
+    promise = trigger_loader.load(1)
+
+    # Set the future to done with an exception BEFORE the batch loader tries to set it
+    # This simulates a race condition or external completion
+    custom_exception = ValueError("External error")
+    promise.set_exception(custom_exception)
+    fut.set_result(None)
+
+    # The promise should raise the exception we set, not the loader's exception
+    with pytest.raises(ValueError, match="External error"):
+        await promise
+
+    # Give time to the event loop to call the exception handler if needed
+    await sleep(0.001)
+
+    # No exception should be raised because done() check prevents InvalidStateError
+    exception_handler.assert_not_called()
+
+
+async def test_does_not_attempt_to_set_done_future_in_failed_dispatch() -> None:
+    """
+    Test that demonstrates done() check in failed_dispatch prevents errors
+    when a future is already done (with result or exception) before the
+    batch fails.
+    """
+    exception_handler = Mock()
+    loop = get_running_loop()
+    loop.set_exception_handler(exception_handler)
+
+    async def call_fn(keys: List[int]) -> List[int]:
+        raise RuntimeError("Batch load failed")
+
+    trigger_loader = DataLoader(call_fn)
+
+    promise = trigger_loader.load(1)
+
+    # Set the future to done with a result BEFORE the batch fails
+    promise.set_result(999)
+
+    # Wait for the batch to fail
+    await sleep(0.01)
+
+    # The promise should still have our result, not the batch error
+    result = await promise
+    assert result == 999
+
+    # Give time to the event loop to call the exception handler if needed
+    await sleep(0.001)
+
+    # No exception should be raised because done() check prevents InvalidStateError
+    exception_handler.assert_not_called()
+
+
 async def test_caches_failed_fetches() -> None:
     async def resolve(keys: List[int]) -> List[int]:
         mapped_keys = [Exception("Error: {}".format(key)) for key in keys]
