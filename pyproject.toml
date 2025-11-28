@@ -19,6 +19,9 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: MIT License",
 ]
 keywords = ["concurrent", "future", "deferred", "aiodataloader"]
@@ -33,7 +36,7 @@ test = ["coveralls", "hatch",  "mock", "pytest>=3.6", "pytest-asyncio", "pytest-
 "Homepage" = "https://github.com/syrusakbary/aiodataloader"
 
 [tool.black]
-target-version = ["py37", "py38", "py39", "py310", "py311"]
+target-version = ["py37", "py38", "py39", "py310", "py311", "py312", "py313", "py314"]
 
 [tool.hatch.envs.default.scripts]
 lint = "flake8 && black --check . && mypy"
