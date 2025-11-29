@@ -33,7 +33,7 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeGuard
 
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 KeyT = TypeVar("KeyT")
 ReturnT = TypeVar("ReturnT")
