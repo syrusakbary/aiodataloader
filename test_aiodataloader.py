@@ -1,4 +1,11 @@
-from asyncio import CancelledError, Future, gather, get_running_loop, sleep
+from asyncio import (
+    CancelledError,
+    Future,
+    gather,
+    get_running_loop,
+    sleep,
+    wait_for,
+)
 from functools import partial
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, TypeVar, Union
 from unittest.mock import Mock
@@ -498,6 +505,29 @@ async def test_catches_error_if_loader_resolver_fails() -> None:
         await a_loader.load("A1")
 
     assert exc_info.value == exc
+
+
+async def test_rejects_loads_if_loader_raises_base_exception() -> None:
+    class Interrupt(BaseException):
+        pass
+
+    exc = Interrupt("time limit")
+
+    async def do_resolve(x: List[Any]) -> List[Any]:
+        raise exc
+
+    loader_result: Tuple[DataLoader[str, str], List[List[str]]] = id_loader(
+        resolve=do_resolve
+    )
+    a_loader, a_load_calls = loader_result
+
+    results = await wait_for(
+        gather(a_loader.load("A1"), a_loader.load("A2"), return_exceptions=True),
+        timeout=5,
+    )
+
+    assert results == [exc, exc]
+    assert a_load_calls == [["A1", "A2"]]
 
 
 async def test_can_call_a_loader_from_a_loader() -> None:

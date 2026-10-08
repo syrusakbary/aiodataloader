@@ -307,10 +307,16 @@ async def dispatch_queue_batch(
 
     except Exception as e:
         return failed_dispatch(loader, queue, e)
+    except BaseException as e:
+        # For example asyncio.CancelledError, or an application-defined
+        # BaseException used as a time-limit signal. Reject the waiting loads so
+        # they don't hang, then let it propagate.
+        failed_dispatch(loader, queue, e)
+        raise
 
 
 def failed_dispatch(
-    loader: DataLoader[Any, Any], queue: List[Loader], error: Exception
+    loader: DataLoader[Any, Any], queue: List[Loader], error: BaseException
 ) -> None:
     """
     Do not cache individual loads if the entire batch dispatch fails,
