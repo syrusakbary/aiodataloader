@@ -29,7 +29,7 @@ dependencies = ["typing_extensions>=4.1.1"]
 
 [project.optional-dependencies]
 build = ["hatch"]
-lint = ["black", "flake8", "flake8-import-order", "hatch", "mypy"]
+lint = ["black", "flake8", "flake8-import-order", "hatch", "mypy", "pytest>=3.6"]
 test = ["coveralls", "hatch",  "mock", "pytest>=3.6", "pytest-asyncio", "pytest-cov", "virtualenv<21; python_version < '3.10'"]
 
 [project.urls]
