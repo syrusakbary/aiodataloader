@@ -317,6 +317,7 @@ def failed_dispatch(
     but still reject each request so they do not hang.
     """
     for ql in queue:
-        loader.clear(ql.key)
+        if loader._cache.get(loader.get_cache_key(ql.key)) is ql.future:
+            loader.clear(ql.key)
         if not ql.future.done():
             ql.future.set_exception(error)

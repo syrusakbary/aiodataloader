@@ -1,4 +1,13 @@
-from asyncio import CancelledError, Future, gather, get_running_loop, sleep
+from asyncio import (
+    CancelledError,
+    Event,
+    Future,
+    gather,
+    get_running_loop,
+    sleep,
+    wait_for,
+)
+from collections import UserDict
 from functools import partial
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, TypeVar, Union
 from unittest.mock import Mock
@@ -498,6 +507,160 @@ async def test_catches_error_if_loader_resolver_fails() -> None:
         await a_loader.load("A1")
 
     assert exc_info.value == exc
+
+
+@pytest.mark.parametrize("replacement", ["pending", "completed", "primed"])
+@pytest.mark.parametrize("normalize", [False, True])
+@pytest.mark.parametrize("batch", [False, True])
+async def test_failed_batch_preserves_replacement_cache(
+    replacement: str, normalize: bool, batch: bool
+) -> None:
+    started, fail, finish_new = Event(), Event(), Event()
+    calls: List[List[str]] = []
+    error = ValueError("old batch failed")
+
+    async def load(keys: List[str]) -> List[str]:
+        calls.append(keys)
+        if len(calls) == 1:
+            started.set()
+            await fail.wait()
+            raise error
+        await finish_new.wait()
+        return ["fresh" for _ in keys]
+
+    cache: UserDict[str, Future[str]] = UserDict()
+    loader = DataLoader(
+        load,
+        batch=batch,
+        get_cache_key=str.lower if normalize else None,
+        cache_map=cache,
+    )
+    old = loader.load("A")
+    await wait_for(started.wait(), 1)
+    key = "a" if normalize else "A"
+    loader.clear(key)
+    if replacement == "primed":
+        loader.prime(key, "primed")
+    new = loader.load(key)
+    if replacement == "completed":
+        finish_new.set()
+        assert await wait_for(new, 1) == "fresh"
+
+    fail.set()
+    with pytest.raises(ValueError) as exc_info:
+        await wait_for(old, 1)
+    observed = loader.load(key)
+    finish_new.set()
+    values = list(await wait_for(gather(new, observed), 1))
+
+    assert exc_info.value is error
+    assert observed is new
+    expected = "primed" if replacement == "primed" else "fresh"
+    assert values == [expected, expected]
+    assert len(calls) == (1 if replacement == "primed" else 2)
+
+
+async def test_failed_batch_evicts_current_future_and_allows_retry() -> None:
+    calls = 0
+
+    async def load(keys: List[str]) -> List[str]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise ValueError("batch failed")
+        return keys
+
+    loader = DataLoader(load, get_cache_key=str.lower)
+    old = loader.load("A")
+    assert loader.load("a") is old
+    with pytest.raises(ValueError, match="batch failed"):
+        await old
+    new = loader.load("a")
+    assert new is not old
+    assert await new == "a"
+    assert calls == 2
+
+
+@pytest.mark.parametrize("max_batch_size", [None, 1])
+async def test_failed_batch_with_repeated_key_after_clear(
+    max_batch_size: Optional[int],
+) -> None:
+    calls = 0
+    error = ValueError("batch failed")
+
+    async def load(keys: List[str]) -> List[str]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise error
+        return keys
+
+    loader = DataLoader(load, max_batch_size=max_batch_size)
+    old = loader.load("A")
+    loader.clear("A")
+    new = loader.load("A")
+    results = await gather(old, new, return_exceptions=True)
+    assert results[0] is error
+    if max_batch_size is None:
+        assert results[1] is error
+        retry = loader.load("A")
+        assert retry is not new
+        assert await retry == "A"
+    else:
+        assert results[1] == "A"
+        observed = loader.load("A")
+        await observed
+        assert observed is new
+    assert calls == 2
+
+
+@pytest.mark.parametrize("old_state", ["cancelled", "completed"])
+async def test_failed_batch_preserves_cache_when_old_future_is_done(
+    old_state: str,
+) -> None:
+    started, fail = Event(), Event()
+
+    async def load(keys: List[str]) -> List[str]:
+        started.set()
+        await fail.wait()
+        raise ValueError("batch failed")
+
+    loader = DataLoader(load)
+    old = loader.load("A")
+    witness = loader.load("B")
+    await wait_for(started.wait(), 1)
+    if old_state == "cancelled":
+        old.cancel()
+    else:
+        old.set_result("external")
+    loader.clear_all().prime("A", "primed")
+    new = loader.load("A")
+    fail.set()
+    # The second key settles only after failed_dispatch has processed the first.
+    with pytest.raises(ValueError, match="batch failed"):
+        await wait_for(witness, 1)
+    observed = loader.load("A")
+    await gather(observed, return_exceptions=True)
+    assert observed is new
+    assert await new == "primed"
+    if old_state == "cancelled":
+        assert old.cancelled()
+    else:
+        assert await old == "external"
+
+
+async def test_failed_uncached_batch_does_not_remove_a_primed_entry() -> None:
+    async def load(keys: List[str]) -> List[str]:
+        raise ValueError("batch failed")
+
+    cache: Dict[str, Future[str]] = {}
+    loader = DataLoader(load, cache=False, cache_map=cache)
+    loader.prime("A", "primed")
+    primed = cache["A"]
+    with pytest.raises(ValueError, match="batch failed"):
+        await loader.load("A")
+    assert cache["A"] is primed
+    assert await primed == "primed"
 
 
 async def test_can_call_a_loader_from_a_loader() -> None:
