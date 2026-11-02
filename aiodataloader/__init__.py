@@ -19,6 +19,7 @@ from typing import (
     List,
     MutableMapping,
     Optional,
+    TypeGuard,
     TypeVar,
     Union,
 )
@@ -28,10 +29,6 @@ if sys.version_info >= (3, 14):
 else:
     from asyncio import iscoroutinefunction
 
-if sys.version_info >= (3, 10):
-    from typing import TypeGuard
-else:
-    from typing_extensions import TypeGuard
 
 __version__ = "0.4.3"
 
