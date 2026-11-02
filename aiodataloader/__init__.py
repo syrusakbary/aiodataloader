@@ -9,19 +9,24 @@ from asyncio import (
 )
 from collections.abc import Callable, Coroutine, Iterable, Iterator, MutableMapping
 from functools import partial
-from typing import Any, Generic, NamedTuple, TypeGuard, TypeVar
+from typing import Any, cast, Generic, NamedTuple, TypeGuard
 
 if sys.version_info >= (3, 14):
     from inspect import iscoroutinefunction
 else:
     from asyncio import iscoroutinefunction
 
+if sys.version_info >= (3, 13):
+    from typing import TypeVar
+else:
+    from typing_extensions import TypeVar
+
 
 __version__ = "0.4.3"
 
 KeyT = TypeVar("KeyT")
 ReturnT = TypeVar("ReturnT")
-CacheKeyT = TypeVar("CacheKeyT")
+CacheKeyT = TypeVar("CacheKeyT", default=KeyT)
 DataLoaderT = TypeVar("DataLoaderT", bound="DataLoader[Any, Any]")
 T = TypeVar("T")
 
@@ -37,7 +42,7 @@ class Loader(NamedTuple):
     future: Future[Any]
 
 
-class DataLoader(Generic[KeyT, ReturnT]):
+class DataLoader(Generic[KeyT, ReturnT, CacheKeyT]):
     batch: bool = True
     max_batch_size: int | None = None
     cache: bool | None = True
@@ -50,8 +55,8 @@ class DataLoader(Generic[KeyT, ReturnT]):
         batch: bool | None = None,
         max_batch_size: int | None = None,
         cache: bool | None = None,
-        get_cache_key: Callable[[KeyT], CacheKeyT | KeyT] | None = None,
-        cache_map: MutableMapping[CacheKeyT | KeyT, Future[ReturnT]] | None = None,
+        get_cache_key: Callable[[KeyT], CacheKeyT] | None = None,
+        cache_map: MutableMapping[CacheKeyT, Future[ReturnT]] | None = None,
         loop: AbstractEventLoop | None = None,
     ):
         self.loop = loop or get_event_loop()
@@ -82,7 +87,7 @@ class DataLoader(Generic[KeyT, ReturnT]):
         if get_cache_key is not None:
             self.get_cache_key = get_cache_key
         if not hasattr(self, "get_cache_key"):
-            self.get_cache_key = lambda x: x
+            self.get_cache_key = cast(Callable[[KeyT], CacheKeyT], lambda x: x)
 
         self._cache = cache_map if cache_map is not None else {}
         self._queue: list[Loader] = []

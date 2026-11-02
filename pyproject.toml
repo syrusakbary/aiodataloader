@@ -23,6 +23,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 keywords = ["concurrent", "future", "deferred", "aiodataloader"]
+dependencies = ["typing_extensions>=4.12; python_version < '3.13'"]
 
 [project.optional-dependencies]
 build = ["hatch"]

@@ -287,8 +287,8 @@ Create a new `DataLoader` given a batch loading function and options.
     instead creating a new Promise and new key in the `batch_load_fn` for every
     load of the same key.
 
-  - *cache_key_fn*: A function to produce a cache key for a given load key.
-    Defaults to `key => key`. Useful to provide when Python objects are keys
+  - *get_cache_key*: A function to produce a cache key for a given load key.
+    Defaults to `lambda key: key`. Useful to provide when Python objects are keys
     and two similarly shaped objects should be considered equivalent.
 
   - *cache_map*: An instance of [dict][] (or an object with a similar API) to be
