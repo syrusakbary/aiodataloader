@@ -1,6 +1,7 @@
 from asyncio import CancelledError, Future, gather, get_running_loop, sleep
+from collections.abc import Callable, Coroutine
 from functools import partial
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, TypeVar
 from unittest.mock import Mock
 
 import pytest
@@ -19,17 +20,17 @@ async def do_test() -> bool:
 
 def id_loader(
     *,
-    resolve: Optional[
-        Callable[[List[T1]], Coroutine[Any, Any, Union[List[T1], List[T2]]]]
-    ] = None,
+    resolve: (
+        Callable[[list[T1]], Coroutine[Any, Any, list[T1] | list[T2]]] | None
+    ) = None,
     **dl_kwargs: Any,
-) -> Tuple[DataLoader[T1, Union[T1, T2]], List[List[T1]]]:
-    load_calls: List[List[T1]] = []
+) -> tuple[DataLoader[T1, T1 | T2], list[list[T1]]]:
+    load_calls: list[list[T1]] = []
 
-    async def default_resolve(x: List[T1]) -> List[T1]:
+    async def default_resolve(x: list[T1]) -> list[T1]:
         return x
 
-    async def fn(keys: List[T1]) -> Union[List[T1], List[T2]]:
+    async def fn(keys: list[T1]) -> list[T1] | list[T2]:
         load_calls.append(keys)
         return await (resolve or default_resolve)(keys)
 
@@ -38,7 +39,7 @@ def id_loader(
 
 
 async def test_build_a_simple_data_loader() -> None:
-    async def call_fn(keys: List[int]) -> List[int]:
+    async def call_fn(keys: list[int]) -> list[int]:
         return keys
 
     identity_loader = DataLoader(call_fn)
@@ -52,7 +53,7 @@ async def test_build_a_simple_data_loader() -> None:
 async def test_can_build_a_data_loader_from_a_partial() -> None:
     value_map = {1: "one"}
 
-    async def call_fn(context: Dict[int, T1], keys: List[int]) -> List[Optional[T1]]:
+    async def call_fn(context: dict[int, T1], keys: list[int]) -> list[T1 | None]:
         return [context.get(key) for key in keys]
 
     partial_fn = partial(call_fn, value_map)
@@ -65,7 +66,7 @@ async def test_can_build_a_data_loader_from_a_partial() -> None:
 
 
 async def test_supports_loading_multiple_keys_in_one_call() -> None:
-    async def call_fn(keys: List[int]) -> List[int]:
+    async def call_fn(keys: list[int]) -> list[int]:
         return keys
 
     identity_loader = DataLoader(call_fn)
@@ -82,7 +83,7 @@ async def test_supports_loading_multiple_keys_in_one_call() -> None:
 
 
 async def test_batches_multiple_requests() -> None:
-    loader_result: Tuple[DataLoader[int, int], List[List[int]]] = id_loader()
+    loader_result: tuple[DataLoader[int, int], list[list[int]]] = id_loader()
     identity_loader, load_calls = loader_result
 
     promise1 = identity_loader.load(1)
@@ -99,7 +100,7 @@ async def test_batches_multiple_requests() -> None:
 
 
 async def test_batches_multiple_requests_with_max_batch_sizes() -> None:
-    loader_result: Tuple[DataLoader[int, int], List[List[int]]] = id_loader(
+    loader_result: tuple[DataLoader[int, int], list[list[int]]] = id_loader(
         max_batch_size=2
     )
     identity_loader, load_calls = loader_result
@@ -120,7 +121,7 @@ async def test_batches_multiple_requests_with_max_batch_sizes() -> None:
 
 
 async def test_coalesces_identical_requests() -> None:
-    loader_result: Tuple[DataLoader[int, int], List[List[int]]] = id_loader()
+    loader_result: tuple[DataLoader[int, int], list[list[int]]] = id_loader()
     identity_loader, load_calls = loader_result
 
     promise1 = identity_loader.load(1)
@@ -138,7 +139,7 @@ async def test_coalesces_identical_requests() -> None:
 
 
 async def test_caches_repeated_requests() -> None:
-    loader_result: Tuple[DataLoader[str, str], List[List[str]]] = id_loader()
+    loader_result: tuple[DataLoader[str, str], list[list[str]]] = id_loader()
     identity_loader, load_calls = loader_result
 
     a, b = await gather(identity_loader.load("A"), identity_loader.load("B"))
@@ -167,7 +168,7 @@ async def test_caches_repeated_requests() -> None:
 
 
 async def test_clears_single_value_in_loader() -> None:
-    loader_result: Tuple[DataLoader[str, str], List[List[str]]] = id_loader()
+    loader_result: tuple[DataLoader[str, str], list[list[str]]] = id_loader()
     identity_loader, load_calls = loader_result
 
     a, b = await gather(identity_loader.load("A"), identity_loader.load("B"))
@@ -188,7 +189,7 @@ async def test_clears_single_value_in_loader() -> None:
 
 
 async def test_clears_all_values_in_loader() -> None:
-    loader_result: Tuple[DataLoader[str, str], List[List[str]]] = id_loader()
+    loader_result: tuple[DataLoader[str, str], list[list[str]]] = id_loader()
     identity_loader, load_calls = loader_result
 
     a, b = await gather(identity_loader.load("A"), identity_loader.load("B"))
@@ -209,7 +210,7 @@ async def test_clears_all_values_in_loader() -> None:
 
 
 async def test_allows_priming_the_cache() -> None:
-    loader_result: Tuple[DataLoader[str, str], List[List[str]]] = id_loader()
+    loader_result: tuple[DataLoader[str, str], list[list[str]]] = id_loader()
     identity_loader, load_calls = loader_result
 
     identity_loader.prime("A", "A")
@@ -223,7 +224,7 @@ async def test_allows_priming_the_cache() -> None:
 
 
 async def test_does_not_prime_keys_that_already_exist() -> None:
-    loader_result: Tuple[DataLoader[str, str], List[List[str]]] = id_loader()
+    loader_result: tuple[DataLoader[str, str], list[list[str]]] = id_loader()
     identity_loader, load_calls = loader_result
 
     identity_loader.prime("A", "X")
@@ -250,15 +251,15 @@ async def test_does_not_prime_keys_that_already_exist() -> None:
 
 
 async def test_resolves_to_error_to_indicate_failure() -> None:
-    async def resolve(keys: List[int]) -> List[int]:
+    async def resolve(keys: list[int]) -> list[int]:
         mapped_keys = [
-            key if key % 2 == 0 else Exception("Odd: {}".format(key)) for key in keys
+            key if key % 2 == 0 else Exception(f"Odd: {key}") for key in keys
         ]
         # ignored because Exceptions are not expected for a batch_load_fn
         # but we are testing unexpected behavior
         return mapped_keys  # type: ignore
 
-    loader_result: Tuple[DataLoader[int, int], List[List[int]]] = id_loader(
+    loader_result: tuple[DataLoader[int, int], list[list[int]]] = id_loader(
         resolve=resolve
     )
     even_loader, load_calls = loader_result
@@ -274,13 +275,13 @@ async def test_resolves_to_error_to_indicate_failure() -> None:
 
 
 async def test_can_represent_failures_and_successes_simultaneously() -> None:
-    async def resolve(keys: List[int]) -> List[int]:
+    async def resolve(keys: list[int]) -> list[int]:
         mapped_keys = [
-            key if key % 2 == 0 else Exception("Odd: {}".format(key)) for key in keys
+            key if key % 2 == 0 else Exception(f"Odd: {key}") for key in keys
         ]
         return mapped_keys  # type: ignore
 
-    loader_result: Tuple[DataLoader[int, int], List[List[int]]] = id_loader(
+    loader_result: tuple[DataLoader[int, int], list[list[int]]] = id_loader(
         resolve=resolve
     )
     even_loader, load_calls = loader_result
@@ -303,7 +304,7 @@ async def test_does_not_attempt_to_set_cancelled_future() -> None:
     loop.set_exception_handler(exception_handler)
     fut: Future[None] = Future()
 
-    async def call_fn(keys: List[int]) -> List[int]:
+    async def call_fn(keys: list[int]) -> list[int]:
         await fut
         return keys
 
@@ -335,7 +336,7 @@ async def test_does_not_attempt_to_set_future_with_result() -> None:
     loop.set_exception_handler(exception_handler)
     fut: Future[None] = Future()
 
-    async def call_fn(keys: List[int]) -> List[int]:
+    async def call_fn(keys: list[int]) -> list[int]:
         await fut
         return keys
 
@@ -371,7 +372,7 @@ async def test_does_not_attempt_to_set_future_with_exception() -> None:
     loop.set_exception_handler(exception_handler)
     fut: Future[None] = Future()
 
-    async def call_fn(keys: List[int]) -> List[int]:
+    async def call_fn(keys: list[int]) -> list[int]:
         await fut
         return keys
 
@@ -406,7 +407,7 @@ async def test_does_not_attempt_to_set_done_future_in_failed_dispatch() -> None:
     loop = get_running_loop()
     loop.set_exception_handler(exception_handler)
 
-    async def call_fn(keys: List[int]) -> List[int]:
+    async def call_fn(keys: list[int]) -> list[int]:
         raise RuntimeError("Batch load failed")
 
     trigger_loader = DataLoader(call_fn)
@@ -431,11 +432,11 @@ async def test_does_not_attempt_to_set_done_future_in_failed_dispatch() -> None:
 
 
 async def test_caches_failed_fetches() -> None:
-    async def resolve(keys: List[int]) -> List[int]:
-        mapped_keys = [Exception("Error: {}".format(key)) for key in keys]
+    async def resolve(keys: list[int]) -> list[int]:
+        mapped_keys = [Exception(f"Error: {key}") for key in keys]
         return mapped_keys  # type: ignore
 
-    loader_result: Tuple[DataLoader[int, int], List[List[int]]] = id_loader(
+    loader_result: tuple[DataLoader[int, int], list[list[int]]] = id_loader(
         resolve=resolve
     )
     error_loader, load_calls = loader_result
@@ -454,7 +455,7 @@ async def test_caches_failed_fetches() -> None:
 
 
 async def test_caches_failed_fetches_2() -> None:
-    loader_result: Tuple[DataLoader[int, int], List[List[int]]] = id_loader()
+    loader_result: tuple[DataLoader[int, int], list[list[int]]] = id_loader()
     identity_loader, load_calls = loader_result
 
     identity_loader.prime(1, Exception("Error: 1"))  # type: ignore
@@ -467,7 +468,7 @@ async def test_caches_failed_fetches_2() -> None:
 
 # It is resilient to job queue ordering
 async def test_batches_loads_occuring_within_promises() -> None:
-    loader_result: Tuple[DataLoader[str, str], List[List[str]]] = id_loader()
+    loader_result: tuple[DataLoader[str, str], list[list[str]]] = id_loader()
     identity_loader, load_calls = loader_result
 
     async def load_b_1() -> str:
@@ -486,10 +487,10 @@ async def test_batches_loads_occuring_within_promises() -> None:
 async def test_catches_error_if_loader_resolver_fails() -> None:
     exc = Exception("AOH!")
 
-    def do_resolve(x: List[Any]) -> Coroutine[Any, Any, List[Any]]:
+    def do_resolve(x: list[Any]) -> Coroutine[Any, Any, list[Any]]:
         raise exc
 
-    loader_result: Tuple[DataLoader[str, str], List[List[str]]] = id_loader(
+    loader_result: tuple[DataLoader[str, str], list[list[str]]] = id_loader(
         resolve=do_resolve
     )
     a_loader, a_load_calls = loader_result
@@ -501,20 +502,20 @@ async def test_catches_error_if_loader_resolver_fails() -> None:
 
 
 async def test_can_call_a_loader_from_a_loader() -> None:
-    deep_loader_result: Tuple[
-        DataLoader[Tuple[str, ...], Tuple[str, ...]], List[List[Tuple[str, ...]]]
+    deep_loader_result: tuple[
+        DataLoader[tuple[str, ...], tuple[str, ...]], list[list[tuple[str, ...]]]
     ] = id_loader()
     deep_loader, deep_load_calls = deep_loader_result
 
-    async def do_resolve(keys: List[str]) -> List[str]:
+    async def do_resolve(keys: list[str]) -> list[str]:
         return list(await deep_loader.load(tuple(keys)))
 
-    a_loader_result: Tuple[DataLoader[str, str], List[List[str]]] = id_loader(
+    a_loader_result: tuple[DataLoader[str, str], list[list[str]]] = id_loader(
         resolve=do_resolve
     )
     a_loader, a_load_calls = a_loader_result
 
-    b_loader_result: Tuple[DataLoader[str, str], List[List[str]]] = id_loader(
+    b_loader_result: tuple[DataLoader[str, str], list[list[str]]] = id_loader(
         resolve=do_resolve
     )
     b_loader, b_load_calls = b_loader_result
@@ -537,10 +538,10 @@ async def test_can_call_a_loader_from_a_loader() -> None:
 
 
 async def test_dataloader_clear_with_missing_key_works() -> None:
-    async def do_resolve(x: List[Any]) -> List[Any]:
+    async def do_resolve(x: list[Any]) -> list[Any]:
         return x
 
-    a_loader_result: Tuple[DataLoader[str, str], List[List[str]]] = id_loader(
+    a_loader_result: tuple[DataLoader[str, str], list[list[str]]] = id_loader(
         resolve=do_resolve
     )
     a_loader, a_load_calls = a_loader_result
@@ -549,7 +550,7 @@ async def test_dataloader_clear_with_missing_key_works() -> None:
 
 
 async def test_load_no_key() -> None:
-    async def call_fn(keys: List[int]) -> List[int]:
+    async def call_fn(keys: list[int]) -> list[int]:
         return keys
 
     identity_loader = DataLoader(call_fn)
@@ -558,7 +559,7 @@ async def test_load_no_key() -> None:
 
 
 async def test_load_none() -> None:
-    async def call_fn(keys: List[int]) -> List[int]:
+    async def call_fn(keys: list[int]) -> list[int]:
         return keys
 
     identity_loader = DataLoader(call_fn)
