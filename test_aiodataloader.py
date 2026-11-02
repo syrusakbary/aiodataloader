@@ -537,6 +537,19 @@ async def test_can_call_a_loader_from_a_loader() -> None:
     assert deep_load_calls == [[("A1", "A2"), ("B1", "B2")]]
 
 
+async def test_uses_get_cache_key_for_cache_map() -> None:
+    async def load(keys: list[dict[str, int]]) -> list[int]:
+        return [key["id"] for key in keys]
+
+    cache: dict[int, Future[int]] = {}
+    loader: DataLoader[dict[str, int], int, int] = DataLoader(
+        load, get_cache_key=lambda key: key["id"], cache_map=cache
+    )
+
+    assert await loader.load({"id": 1}) == 1
+    assert list(cache) == [1]
+
+
 async def test_dataloader_clear_with_missing_key_works() -> None:
     async def do_resolve(x: list[Any]) -> list[Any]:
         return x
